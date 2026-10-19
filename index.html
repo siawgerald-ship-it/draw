@@ -39,8 +39,6 @@ label.sr { position: absolute; left: -9999px; }
 input[type="text"] { flex: 1 1 200px; min-width: 0; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
 input[type="text"]::placeholder { color: var(--muted); }
 button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 6px; padding: 14px 24px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
-button.quiet { background: transparent; color: var(--ink); border-color: var(--line); padding: 8px 14px; font-size: 14px; }
-button.danger { border-color: var(--danger); color: var(--danger); background: transparent; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .msg { margin: 12px 0 0; min-height: 1.5em; font-size: 15px; color: var(--muted); }
@@ -57,8 +55,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .tile.taken { border-style: solid; }
 .tile.taken .num { color: var(--gold-ink); background: var(--gold); align-self: flex-start; padding: 4px 10px 1px; border-radius: 5px; }
 .tile.taken .who { color: var(--ink); font-weight: 600; }
-.owner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 20px; }
-.owner span { color: var(--muted); font-size: 14px; flex: 1 1 200px; }
 </style>
 </head>
 <body>
@@ -95,11 +91,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   </section>
 
   <ol class="board" id="board" aria-label="Draw board"></ol>
-
-  <div class="owner" id="ownerBar" hidden>
-    <span>Organiser only. Reset clears every draw so everyone can start again.</span>
-    <button type="button" class="quiet" id="resetBtn">Reset draw</button>
-  </div>
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -113,16 +104,23 @@ var firebaseConfig = {
   appId: "1:190680775897:web:6016e5efe54ea5ba3bd2c8"
 };
 
-/* Organiser link: open the page with this secret on the end to see the Reset button.
-   Change the words after the # to your own secret and keep it to yourself. */
-var ADMIN_HASH = "#gerald-reset-4821";
-
 (function () {
   var TOTAL = 10;
   var $ = function (id) { return document.getElementById(id); };
-  var players = {};
+  var slots = {};
   var busy = false;
-  var resetArmed = false;
+
+  /* Numbers set aside for specific people. They don't draw; they're already placed. */
+  var RESERVED = { 1: "Priscilla" };
+
+  /* Firebase can return the board as a list with empty gaps. This turns it into a plain
+     number-to-person map and adds the reserved people. */
+  function toMap(v) {
+    var o = {};
+    if (v) Object.keys(v).forEach(function (k) { if (v[k]) o[k] = v[k]; });
+    Object.keys(RESERVED).forEach(function (n) { o[n] = { name: RESERVED[n], device: "reserved" }; });
+    return o;
+  }
 
   /* A random id saved on this device, so one device can only draw once. */
   var deviceId;
@@ -146,35 +144,38 @@ var ADMIN_HASH = "#gerald-reset-4821";
     return encodeURIComponent(name.toLowerCase()).replace(/\./g, "%2E");
   }
 
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
   function mineOf(map) {
     var ks = Object.keys(map || {});
-    for (var i = 0; i < ks.length; i++) if (map[ks[i]].device === deviceId) return map[ks[i]];
+    for (var i = 0; i < ks.length; i++) {
+      if (map[ks[i]] && map[ks[i]].device === deviceId) return { number: Number(ks[i]), name: map[ks[i]].name };
+    }
     return null;
   }
 
   function render() {
-    var list = Object.keys(players).map(function (k) { return players[k]; });
-    var byNum = {};
-    list.forEach(function (p) { byNum[p.number] = p; });
     var board = $("board");
     board.replaceChildren();
+    var count = 0;
     for (var n = 1; n <= TOTAL; n++) {
-      var p = byNum[n];
+      var s = slots[n];
+      if (s) count++;
       var li = document.createElement("li");
-      li.className = "tile" + (p ? " taken" : "");
+      li.className = "tile" + (s ? " taken" : "");
       var num = document.createElement("span"); num.className = "num"; num.textContent = n;
-      var who = document.createElement("span"); who.className = "who"; who.textContent = p ? p.name : "Open";
+      var who = document.createElement("span"); who.className = "who"; who.textContent = s ? String(s.name || "Someone") : "Open";
       li.appendChild(num); li.appendChild(who);
       board.appendChild(li);
     }
-    $("count").textContent = list.length + " of " + TOTAL + " drawn";
-    $("bar").style.width = (list.length / TOTAL * 100) + "%";
+    $("count").textContent = count + " of " + TOTAL + " drawn";
+    $("bar").style.width = (count / TOTAL * 100) + "%";
 
-    var me = mineOf(players);
+    var me = mineOf(slots);
     $("drawPanel").hidden = !!me;
     $("resultPanel").hidden = !me;
     if (me) { $("myNum").textContent = me.number; $("myName").textContent = me.name; }
-    $("drawBtn").disabled = busy || list.length >= TOTAL;
+    $("drawBtn").disabled = busy || count >= TOTAL;
   }
 
   if (typeof firebase === "undefined") {
@@ -187,11 +188,11 @@ var ADMIN_HASH = "#gerald-reset-4821";
   firebase.initializeApp(firebaseConfig);
   var ref = firebase.database().ref("draw");
 
-  ref.child("players").on("value", function (snap) {
-    players = snap.val() || {};
+  ref.child("slots").on("value", function (snap) {
+    slots = toMap(snap.val());
     if ($("msg").textContent === "Connecting…") say("");
     render();
-    if (Object.keys(players).length >= TOTAL && !mineOf(players)) say("All 10 numbers are taken.", true);
+    if (Object.keys(slots).length >= TOTAL && !mineOf(slots)) say("All 10 numbers are taken.", true);
   }, function () {
     say("Can't reach the database. Check your internet and reload.", true);
   });
@@ -202,26 +203,31 @@ var ADMIN_HASH = "#gerald-reset-4821";
     var key = keyOf(name);
     busy = true; say("Drawing…"); render();
     try {
-      var result = await ref.transaction(function (cur) {
-        cur = cur || {};
-        var pl = cur.players || {};
-        if (pl[key]) return;                      // name already used
-        if (mineOf(pl)) return;                   // this device already drew
-        var used = {};
-        Object.keys(pl).forEach(function (k) { used[pl[k].number] = true; });
+      for (var attempt = 0; attempt < 12; attempt++) {
+        var snap = await ref.child("slots").once("value");
+        var cur = toMap(snap.val());
+        if (mineOf(cur)) { say("You've already drawn on this device."); return; }
+        var ks = Object.keys(cur);
+        for (var i = 0; i < ks.length; i++) {
+          if (keyOf(String(cur[ks[i]].name || "")) === key) { say("That name has already drawn. Use your own name.", true); return; }
+        }
         var free = [];
-        for (var n = 1; n <= TOTAL; n++) if (!used[n]) free.push(n);
-        if (!free.length) return;                 // board is full
-        pl[key] = { name: name, number: free[Math.floor(Math.random() * free.length)], device: deviceId };
-        cur.players = pl;
-        return cur;
-      });
-      var val = result.snapshot.val() || {};
-      var pl2 = val.players || {};
-      if (result.committed && mineOf(pl2)) { say(""); $("nameInput").value = ""; }
-      else if (mineOf(pl2)) { say("You've already drawn on this device."); }
-      else if (pl2[key]) { say("That name has already drawn. Use your own name.", true); }
-      else { say("All 10 numbers are taken.", true); }
+        for (var n = 1; n <= TOTAL; n++) if (!cur[n]) free.push(n);
+        if (!free.length) { say("All 10 numbers are taken.", true); return; }
+        var pick = free[Math.floor(Math.random() * free.length)];
+        var upd = {};
+        upd["slots/" + pick] = { name: name, device: deviceId, at: Date.now() };
+        upd["names/" + key] = pick;
+        upd["devices/" + deviceId] = pick;
+        try {
+          await ref.update(upd);       // all three writes succeed together, or none do
+          say(""); $("nameInput").value = "";
+          return;
+        } catch (e) {
+          await wait(200 + Math.random() * 300);   // someone took it first: pick again
+        }
+      }
+      say("Lots of people are drawing at once. Try again.", true);
     } catch (e) {
       say("Something went wrong. Check your internet and try again.", true);
     } finally {
@@ -232,20 +238,6 @@ var ADMIN_HASH = "#gerald-reset-4821";
   $("form").addEventListener("submit", function (ev) {
     ev.preventDefault();
     if (!busy) draw($("nameInput").value);
-  });
-
-  if (location.hash === ADMIN_HASH) $("ownerBar").hidden = false;
-  $("resetBtn").addEventListener("click", function () {
-    var btn = $("resetBtn");
-    if (!resetArmed) {
-      resetArmed = true; btn.textContent = "Tap again to clear all draws"; btn.className = "danger";
-      setTimeout(function () { resetArmed = false; btn.textContent = "Reset draw"; btn.className = "quiet"; }, 5000);
-      return;
-    }
-    resetArmed = false; btn.textContent = "Reset draw"; btn.className = "quiet";
-    ref.remove().then(function () {
-      say("Draw cleared. Everyone can draw again.");
-    }, function () { say("Reset failed. Try again.", true); });
   });
 
   render();
