@@ -1,83 +1,130 @@
+
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Susu Number Draw</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Public+Sans:wght@400;600&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+
 <style>
 :root {
-  --bg: #F1F4F0; --surface: #FFFFFF; --ink: #13201A; --muted: #55665D; --line: #D3DCD5;
-  --accent: #0B6B4F; --accent-ink: #FFFFFF; --gold: #F2B705; --gold-ink: #2E2200; --danger: #B3261E;
-  color-scheme: light;
-  --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
-  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg:#F1F4F0; --surface:#fff; --ink:#13201A;
+  --muted:#55665D; --line:#D3DCD5;
+  --accent:#0B6B4F; --gold:#F2B705; --danger:#B3261E;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0D1411; --surface: #16201B; --ink: #E7EFE9; --muted: #9AABA1; --line: #27352D;
-    --accent: #4FD1A5; --accent-ink: #06261B; --gold: #F2C230; --gold-ink: #2A1E00; --danger: #FF8A80;
-    color-scheme: dark;
-  }
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:32px 16px 56px;
+  background:var(--bg); color:var(--ink);
+  font:17px/1.5 "Public Sans",system-ui,sans-serif;
 }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.5; padding: 32px 16px 56px; }
-.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
-.eyebrow { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
-h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(44px, 12vw, 72px); line-height: 0.95; margin: 0; text-wrap: balance; }
-.lede { margin: 12px 0 0; color: var(--muted); max-width: 46ch; }
-.status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.count { font-variant-numeric: tabular-nums; font-weight: 600; }
-.meter { flex: 1 1 140px; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
-.meter > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.3s ease; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
-.panel h2 { font-size: 18px; margin: 0 0 12px; }
-form { display: flex; gap: 10px; flex-wrap: wrap; }
-label.sr { position: absolute; left: -9999px; }
-input[type="text"] { flex: 1 1 200px; min-width: 0; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
-input[type="text"]::placeholder { color: var(--muted); }
-button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 6px; padding: 14px 24px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-.msg { margin: 12px 0 0; min-height: 1.5em; font-size: 15px; color: var(--muted); }
-.msg.err { color: var(--danger); }
-.result { display: flex; align-items: center; gap: 20px; }
-.result .big { font-family: var(--font-display); font-weight: 800; font-size: 96px; line-height: 0.9; background: var(--gold); color: var(--gold-ink); border-radius: 8px; padding: 10px 22px 6px; font-variant-numeric: tabular-nums; }
-.result p { margin: 0; }
-.result .name { font-size: 20px; font-weight: 600; overflow-wrap: anywhere; }
-.result .sub { color: var(--muted); font-size: 14px; }
-.board { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
-.tile { background: var(--surface); border: 1px dashed var(--line); border-radius: 8px; padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.tile .num { font-family: var(--font-display); font-weight: 800; font-size: 44px; line-height: 0.95; color: var(--muted); font-variant-numeric: tabular-nums; }
-.tile .who { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
-.tile.taken { border-style: solid; }
-.tile.taken .num { color: var(--gold-ink); background: var(--gold); align-self: flex-start; padding: 4px 10px 1px; border-radius: 5px; }
-.tile.taken .who { color: var(--ink); font-weight: 600; }
+.wrap {
+  max-width:640px; margin:auto;
+  display:flex; flex-direction:column; gap:24px;
+}
+.eyebrow {
+  font-size:13px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted);
+}
+h1 {
+  font:800 clamp(44px,12vw,72px)/.95
+  "Big Shoulders Display",Impact,sans-serif;
+  margin:0;
+}
+.lede { color:var(--muted); }
+.status { display:flex; align-items:center; gap:12px; }
+.meter {
+  flex:1; height:8px; background:var(--line);
+  border-radius:4px; overflow:hidden;
+}
+.meter span {
+  display:block; height:100%; width:0;
+  background:var(--accent); transition:width .3s;
+}
+.panel {
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:8px; padding:20px;
+}
+.panel h2 { font-size:18px; margin:0 0 12px; }
+form { display:flex; gap:10px; flex-wrap:wrap; }
+input {
+  flex:1 1 200px; min-width:0; font:inherit;
+  padding:14px; border:1px solid var(--line);
+  border-radius:6px; background:var(--bg); color:var(--ink);
+}
+button {
+  font:inherit; font-weight:600; padding:14px 24px;
+  border:0; border-radius:6px;
+  background:var(--accent); color:white; cursor:pointer;
+}
+button:disabled { opacity:.5; cursor:not-allowed; }
+.msg { min-height:1.5em; color:var(--muted); font-size:14px; }
+.err { color:var(--danger); }
+.result { display:flex; align-items:center; gap:20px; }
+.big {
+  background:var(--gold); padding:10px 22px;
+  border-radius:8px; font:800 80px/.95
+  "Big Shoulders Display",Impact,sans-serif;
+}
+.name { font-size:20px; font-weight:600; overflow-wrap:anywhere; }
+.sub { font-size:14px; color:var(--muted); }
+.board {
+  list-style:none; margin:0; padding:0;
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
+  gap:10px;
+}
+.tile {
+  background:var(--surface); border:1px dashed var(--line);
+  border-radius:8px; padding:12px;
+  display:flex; flex-direction:column; gap:4px;
+  min-width:0;
+}
+.num {
+  font:800 44px/.95 "Big Shoulders Display",Impact,sans-serif;
+  color:var(--muted);
+}
+.who { font-size:14px; color:var(--muted); overflow-wrap:anywhere; }
+.tile.taken { border-style:solid; }
+.tile.taken .num {
+  color:#2E2200; background:var(--gold);
+  padding:4px 10px; align-self:flex-start; border-radius:5px;
+}
+.tile.taken .who { color:var(--ink); font-weight:600; }
+[hidden] { display:none !important; }
+:focus-visible { outline:3px solid var(--gold); outline-offset:2px; }
 </style>
 </head>
+
 <body>
 <main class="wrap">
   <header>
     <p class="eyebrow">10 people · numbers 1 to 10 · no repeats</p>
     <h1>Susu Number Draw</h1>
-    <p class="lede">Type your name and tap Draw. You get one number and nobody else can get it.</p>
+    <p class="lede">
+      Enter your name and tap Draw. Priscilla is assigned number 1;
+      everyone else draws randomly from numbers 2 to 10.
+    </p>
   </header>
 
   <div class="status">
-    <span class="count" id="count">0 of 10 drawn</span>
+    <strong id="count">0 of 10 drawn</strong>
     <div class="meter" aria-hidden="true"><span id="bar"></span></div>
   </div>
 
   <section class="panel" id="drawPanel">
     <h2>Draw your number</h2>
     <form id="form" autocomplete="off">
-      <label class="sr" for="nameInput">Your name</label>
-      <input type="text" id="nameInput" maxlength="40" placeholder="Your name" required>
+      <input id="nameInput" type="text" maxlength="40"
+             placeholder="Your name" aria-label="Your name" required>
       <button type="submit" id="drawBtn">Draw</button>
     </form>
-    <p class="msg" id="msg" role="status" aria-live="polite">Connecting…</p>
+    <p class="msg" id="msg" role="status" aria-live="polite">
+      Connecting...
+    </p>
   </section>
 
   <section class="panel" id="resultPanel" hidden>
@@ -85,7 +132,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="big" id="myNum">0</div>
       <div>
         <p class="name" id="myName"></p>
-        <p class="sub">Your number is saved. You can't draw again on this device.</p>
+        <p class="sub">Your number has been saved on this device.</p>
       </div>
     </div>
   </section>
@@ -95,61 +142,52 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script>
-var firebaseConfig = {
-  apiKey: "AIzaSyCkIOL7O43bbJrtF9ViO4xpg1a5zTwzc4Q",
-  authDomain: "sss-2190b.firebaseapp.com",
-  databaseURL: "https://sss-2190b-default-rtdb.firebaseio.com",
-  projectId: "sss-2190b",
-  appId: "1:190680775897:web:6016e5efe54ea5ba3bd2c8"
-};
 
+<script>
 (function () {
+  "use strict";
+
   var TOTAL = 10;
   var $ = function (id) { return document.getElementById(id); };
   var slots = {};
   var busy = false;
+  var ready = false;
 
-  /* Numbers set aside for specific people. They don't draw; they're already placed. */
-  var RESERVED = { 1: "Priscilla" };
+  // Firebase project configuration.
+  var firebaseConfig = {
+    apiKey: "AIzaSyCkIOL7O43bbJrtF9ViO4xpg1a5zTwzc4Q",
+    authDomain: "sss-2190b.firebaseapp.com",
+    databaseURL: "https://sss-2190b-default-rtdb.firebaseio.com",
+    projectId: "sss-2190b",
+    appId: "1:190680775897:web:6016e5efe54ea5ba3bd2c8"
+  };
 
-  /* Firebase can return the board as a list with empty gaps. This turns it into a plain
-     number-to-person map and adds the reserved people. */
-  function toMap(v) {
-    var o = {};
-    if (v) Object.keys(v).forEach(function (k) { if (v[k]) o[k] = v[k]; });
-    Object.keys(RESERVED).forEach(function (n) { o[n] = { name: RESERVED[n], device: "reserved" }; });
-    return o;
-  }
-
-  /* A random id saved on this device, so one device can only draw once. */
+  // Generate an ID for this browser installation.
   var deviceId;
   try {
     deviceId = localStorage.getItem("drawDevice");
     if (!deviceId) {
-      deviceId = "d" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      deviceId = "d" + Math.random().toString(36).slice(2)
+        + Date.now().toString(36);
       localStorage.setItem("drawDevice", deviceId);
     }
   } catch (e) {
-    deviceId = "d" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    deviceId = "d" + Math.random().toString(36).slice(2)
+      + Date.now().toString(36);
   }
 
-  function say(text, isErr) {
-    var m = $("msg");
-    m.textContent = text;
-    m.className = "msg" + (isErr ? " err" : "");
+  function say(message, error) {
+    $("msg").textContent = message;
+    $("msg").className = "msg" + (error ? " err" : "");
   }
-
-  function keyOf(name) {
-    return encodeURIComponent(name.toLowerCase()).replace(/\./g, "%2E");
-  }
-
-  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   function mineOf(map) {
-    var ks = Object.keys(map || {});
-    for (var i = 0; i < ks.length; i++) {
-      if (map[ks[i]] && map[ks[i]].device === deviceId) return { number: Number(ks[i]), name: map[ks[i]].name };
+    var keys = Object.keys(map || {});
+    for (var i = 0; i < keys.length; i++) {
+      var slot = map[keys[i]];
+      if (slot && slot.device === deviceId) {
+        return { number: Number(keys[i]), name: slot.name };
+      }
     }
     return null;
   }
@@ -158,85 +196,199 @@ var firebaseConfig = {
     var board = $("board");
     board.replaceChildren();
     var count = 0;
+
     for (var n = 1; n <= TOTAL; n++) {
-      var s = slots[n];
-      if (s) count++;
+      var slot = slots[n];
+      if (slot) count++;
+
       var li = document.createElement("li");
-      li.className = "tile" + (s ? " taken" : "");
-      var num = document.createElement("span"); num.className = "num"; num.textContent = n;
-      var who = document.createElement("span"); who.className = "who"; who.textContent = s ? String(s.name || "Someone") : "Open";
-      li.appendChild(num); li.appendChild(who);
+      li.className = "tile" + (slot ? " taken" : "");
+
+      var num = document.createElement("span");
+      num.className = "num";
+      num.textContent = n;
+
+      var who = document.createElement("span");
+      who.className = "who";
+      who.textContent = slot ? String(slot.name || "Participant") : "Open";
+
+      li.appendChild(num);
+      li.appendChild(who);
       board.appendChild(li);
     }
+
     $("count").textContent = count + " of " + TOTAL + " drawn";
     $("bar").style.width = (count / TOTAL * 100) + "%";
 
     var me = mineOf(slots);
     $("drawPanel").hidden = !!me;
     $("resultPanel").hidden = !me;
-    if (me) { $("myNum").textContent = me.number; $("myName").textContent = me.name; }
-    $("drawBtn").disabled = busy || count >= TOTAL;
+
+    if (me) {
+      $("myNum").textContent = me.number;
+      $("myName").textContent = me.name;
+    }
+
+    $("drawBtn").disabled = !ready || busy || count >= TOTAL;
   }
 
   if (typeof firebase === "undefined") {
-    say("Can't load Firebase. Open this page in a normal browser.", true);
-    $("drawBtn").disabled = true;
+    say("Firebase failed to load. Check your internet connection.", true);
     render();
     return;
   }
 
-  firebase.initializeApp(firebaseConfig);
-  var ref = firebase.database().ref("draw");
-
-  ref.child("slots").on("value", function (snap) {
-    slots = toMap(snap.val());
-    if ($("msg").textContent === "Connecting…") say("");
+  var ref;
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    ref = firebase.database().ref("draw/slots");
+  } catch (e) {
+    say("Firebase could not initialize.", true);
     render();
-    if (Object.keys(slots).length >= TOTAL && !mineOf(slots)) say("All 10 numbers are taken.", true);
-  }, function () {
-    say("Can't reach the database. Check your internet and reload.", true);
+    return;
+  }
+
+  ref.on("value", function (snapshot) {
+    slots = snapshot.val() || {};
+    ready = true;
+    render();
+    if (Object.keys(slots).length >= TOTAL && !mineOf(slots)) {
+      say("All 10 numbers are taken.", true);
+    } else if (!$("resultPanel").hidden) {
+      say("Your number is saved.");
+    } else {
+      say("Enter your name to draw.");
+    }
+  }, function (error) {
+    ready = false;
+    render();
+    say("Database access failed. Check Firebase rules and internet.", true);
+    console.error(error);
   });
+
+  function delay(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  async function claimNumber(number, name) {
+    var slotRef = ref.child(String(number));
+
+    var result = await slotRef.transaction(function (current) {
+      // Never overwrite an occupied slot.
+      if (current !== null) return;
+
+      // The database rules also validate the number and name.
+      return {
+        name: name,
+        device: deviceId,
+        at: Date.now()
+      };
+    }, undefined, false);
+
+    return result.committed;
+  }
 
   async function draw(raw) {
     var name = raw.trim().replace(/\s+/g, " ");
-    if (!name) { say("Enter your name first.", true); return; }
-    var key = keyOf(name);
-    busy = true; say("Drawing…"); render();
+
+    if (!ready) {
+      say("Wait for the database to connect.", true);
+      return;
+    }
+
+    if (!name) {
+      say("Enter your name first.", true);
+      return;
+    }
+
+    var normalized = name.toLowerCase();
+    var isPriscilla = normalized === "priscilla";
+
+    // Use the exact spelling required by the Firebase rules.
+    if (isPriscilla) name = "Priscilla";
+
+    busy = true;
+    render();
+    say("Drawing...");
+
     try {
-      for (var attempt = 0; attempt < 12; attempt++) {
-        var snap = await ref.child("slots").once("value");
-        var cur = toMap(snap.val());
-        if (mineOf(cur)) { say("You've already drawn on this device."); return; }
-        var ks = Object.keys(cur);
-        for (var i = 0; i < ks.length; i++) {
-          if (keyOf(String(cur[ks[i]].name || "")) === key) { say("That name has already drawn. Use your own name.", true); return; }
-        }
-        var free = [];
-        for (var n = 1; n <= TOTAL; n++) if (!cur[n]) free.push(n);
-        if (!free.length) { say("All 10 numbers are taken.", true); return; }
-        var pick = free[Math.floor(Math.random() * free.length)];
-        var upd = {};
-        upd["slots/" + pick] = { name: name, device: deviceId, at: Date.now() };
-        upd["names/" + key] = pick;
-        upd["devices/" + deviceId] = pick;
-        try {
-          await ref.update(upd);       // all three writes succeed together, or none do
-          say(""); $("nameInput").value = "";
+      // Refresh the board before checking existing entries.
+      var snapshot = await ref.once("value");
+      slots = snapshot.val() || {};
+
+      if (mineOf(slots)) {
+        say("This device has already drawn.", true);
+        return;
+      }
+
+      var keys = Object.keys(slots);
+      for (var i = 0; i < keys.length; i++) {
+        var existing = slots[keys[i]];
+        if (existing &&
+            String(existing.name || "").trim().toLowerCase() === normalized) {
+          say("That name has already drawn.", true);
           return;
-        } catch (e) {
-          await wait(200 + Math.random() * 300);   // someone took it first: pick again
         }
       }
-      say("Lots of people are drawing at once. Try again.", true);
-    } catch (e) {
-      say("Something went wrong. Check your internet and try again.", true);
+
+      if (isPriscilla) {
+        if (slots["1"]) {
+          say("Number 1 has already been assigned.", true);
+          return;
+        }
+
+        var success = await claimNumber(1, "Priscilla");
+        if (!success) {
+          say("Number 1 was just taken. Please refresh and check.", true);
+          return;
+        }
+      } else {
+        // Randomize the available numbers 2–10.
+        var free = [];
+        for (var n = 2; n <= TOTAL; n++) {
+          if (!slots[String(n)]) free.push(n);
+        }
+
+        // Shuffle the candidate order.
+        for (var j = free.length - 1; j > 0; j--) {
+          var k = Math.floor(Math.random() * (j + 1));
+          var temp = free[j];
+          free[j] = free[k];
+          free[k] = temp;
+        }
+
+        var allocated = false;
+
+        // Each number is claimed with its own atomic transaction.
+        for (var x = 0; x < free.length; x++) {
+          if (await claimNumber(free[x], name)) {
+            allocated = true;
+            break;
+          }
+          await delay(50 + Math.random() * 150);
+        }
+
+        if (!allocated) {
+          say("No numbers are available. Please try again.", true);
+          return;
+        }
+      }
+
+      $("nameInput").value = "";
+      say("Number assigned successfully.");
+    } catch (error) {
+      console.error(error);
+      say("Draw failed. Check your connection and Firebase rules.", true);
     } finally {
-      busy = false; render();
+      busy = false;
+      render();
     }
   }
 
-  $("form").addEventListener("submit", function (ev) {
-    ev.preventDefault();
+  $("form").addEventListener("submit", function (event) {
+    event.preventDefault();
     if (!busy) draw($("nameInput").value);
   });
 
