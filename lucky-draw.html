@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lucky Number Draw</title>
+<title> Susu Number Draw</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Public+Sans:wght@400;600&display=swap">
@@ -74,7 +74,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     <div class="meter" aria-hidden="true"><span id="bar"></span></div>
   </div>
 
-  <section class="panel">
+  <section class="panel" id="drawPanel">
     <h2>Draw your number</h2>
     <form id="form" autocomplete="off">
       <label class="sr" for="nameInput">Your name</label>
@@ -89,7 +89,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="big" id="myNum">0</div>
       <div>
         <p class="name" id="myName"></p>
-        <p class="sub" id="mySub"></p>
+        <p class="sub">Your number is saved. You can't draw again on this device.</p>
       </div>
     </div>
   </section>
@@ -113,12 +113,28 @@ var firebaseConfig = {
   appId: "1:190680775897:web:6016e5efe54ea5ba3bd2c8"
 };
 
+/* Organiser link: open the page with this secret on the end to see the Reset button.
+   Change the words after the # to your own secret and keep it to yourself. */
+var ADMIN_HASH = "#gerald-reset-4821";
+
 (function () {
   var TOTAL = 10;
   var $ = function (id) { return document.getElementById(id); };
   var players = {};
   var busy = false;
   var resetArmed = false;
+
+  /* A random id saved on this device, so one device can only draw once. */
+  var deviceId;
+  try {
+    deviceId = localStorage.getItem("drawDevice");
+    if (!deviceId) {
+      deviceId = "d" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem("drawDevice", deviceId);
+    }
+  } catch (e) {
+    deviceId = "d" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
 
   function say(text, isErr) {
     var m = $("msg");
@@ -128,6 +144,12 @@ var firebaseConfig = {
 
   function keyOf(name) {
     return encodeURIComponent(name.toLowerCase()).replace(/\./g, "%2E");
+  }
+
+  function mineOf(map) {
+    var ks = Object.keys(map || {});
+    for (var i = 0; i < ks.length; i++) if (map[ks[i]].device === deviceId) return map[ks[i]];
+    return null;
   }
 
   function render() {
@@ -147,16 +169,12 @@ var firebaseConfig = {
     }
     $("count").textContent = list.length + " of " + TOTAL + " drawn";
     $("bar").style.width = (list.length / TOTAL * 100) + "%";
-    var full = list.length >= TOTAL;
-    $("drawBtn").disabled = busy || full;
-    if (full && !busy && !/^Everyone|already/.test($("msg").textContent)) say("All 10 numbers are taken.");
-  }
 
-  function showResult(p, isNew) {
-    $("resultPanel").hidden = false;
-    $("myNum").textContent = p.number;
-    $("myName").textContent = p.name;
-    $("mySub").textContent = isNew ? "Your number is saved. You can't draw again." : "This name already drew. Same number as before.";
+    var me = mineOf(players);
+    $("drawPanel").hidden = !!me;
+    $("resultPanel").hidden = !me;
+    if (me) { $("myNum").textContent = me.number; $("myName").textContent = me.name; }
+    $("drawBtn").disabled = busy || list.length >= TOTAL;
   }
 
   if (typeof firebase === "undefined") {
@@ -173,6 +191,7 @@ var firebaseConfig = {
     players = snap.val() || {};
     if ($("msg").textContent === "Connecting…") say("");
     render();
+    if (Object.keys(players).length >= TOTAL && !mineOf(players)) say("All 10 numbers are taken.", true);
   }, function () {
     say("Can't reach the database. Check your internet and reload.", true);
   });
@@ -186,20 +205,22 @@ var firebaseConfig = {
       var result = await ref.transaction(function (cur) {
         cur = cur || {};
         var pl = cur.players || {};
-        if (pl[key]) return;
+        if (pl[key]) return;                      // name already used
+        if (mineOf(pl)) return;                   // this device already drew
         var used = {};
         Object.keys(pl).forEach(function (k) { used[pl[k].number] = true; });
         var free = [];
         for (var n = 1; n <= TOTAL; n++) if (!used[n]) free.push(n);
-        if (!free.length) return;
-        pl[key] = { name: name, number: free[Math.floor(Math.random() * free.length)] };
+        if (!free.length) return;                 // board is full
+        pl[key] = { name: name, number: free[Math.floor(Math.random() * free.length)], device: deviceId };
         cur.players = pl;
         return cur;
       });
       var val = result.snapshot.val() || {};
-      var p = (val.players || {})[key];
-      if (p && result.committed) { showResult(p, true); say(""); $("nameInput").value = ""; }
-      else if (p) { showResult(p, false); say(p.name + " already drew number " + p.number + "."); }
+      var pl2 = val.players || {};
+      if (result.committed && mineOf(pl2)) { say(""); $("nameInput").value = ""; }
+      else if (mineOf(pl2)) { say("You've already drawn on this device."); }
+      else if (pl2[key]) { say("That name has already drawn. Use your own name.", true); }
       else { say("All 10 numbers are taken.", true); }
     } catch (e) {
       say("Something went wrong. Check your internet and try again.", true);
@@ -213,7 +234,7 @@ var firebaseConfig = {
     if (!busy) draw($("nameInput").value);
   });
 
-  if (location.hash === "#admin") $("ownerBar").hidden = false;
+  if (location.hash === ADMIN_HASH) $("ownerBar").hidden = false;
   $("resetBtn").addEventListener("click", function () {
     var btn = $("resetBtn");
     if (!resetArmed) {
@@ -223,7 +244,7 @@ var firebaseConfig = {
     }
     resetArmed = false; btn.textContent = "Reset draw"; btn.className = "quiet";
     ref.remove().then(function () {
-      $("resultPanel").hidden = true; say("Draw cleared. Everyone can draw again.");
+      say("Draw cleared. Everyone can draw again.");
     }, function () { say("Reset failed. Try again.", true); });
   });
 
@@ -231,4 +252,4 @@ var firebaseConfig = {
 })();
 </script>
 </body>
-  </html>
+</html>
